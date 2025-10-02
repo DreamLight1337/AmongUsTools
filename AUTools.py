@@ -1,4 +1,4 @@
-# Among Us Tools v1.0.7 by 忆梦
+# Among Us Tools v1.0.8 by 忆梦
 # 本程序仅供学习交流使用，请勿用于商业用途。
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
@@ -7,13 +7,21 @@ import os
 import psutil
 import random
 from datetime import datetime
+import urllib.request
+import ssl
+import tempfile
+import shutil
+import concurrent.futures
+import threading
+import logging
+import logging.handlers
 
 class AmongUsTools:
     def __init__(self, root):
         self.root = root
         self.root.title("Among Us 私服安装工具箱")
         
-        # 设置窗口大小
+        # 设置窗口大小1
         self.root.geometry("600x400")
         self.root.resizable(False, False)
         
@@ -22,6 +30,9 @@ class AmongUsTools:
         
         # 设置样式
         self.root.configure(bg='#f0f0f0')
+
+        # 初始化日志系统
+        self.init_logging()
 
         # 创建选项卡
         self.tabControl = ttk.Notebook(root)
@@ -50,155 +61,38 @@ class AmongUsTools:
         # 存储自定义服务器数据
         self.custom_server_data = None
         
-        # 定义服务器配置
-        self.server_configs = {
-            "清风": [
-                {
-                    "$type": "StaticHttpRegionInfo, Assembly-CSharp",
-                    "Name": "<color=#16FFFF>清风服</color><color=#1B5EB7>[宁波]</color>",
-                    "PingServer": "https://nb.server.qingfengawa.top",
-                    "Servers": [
-                        {
-                            "Name": "Http-1",
-                            "Ip": "https://nb.server.qingfengawa.top",
-                            "Port": 443,
-                            "UseDtls": False,
-                            "Players": 0,
-                            "ConnectionFailures": 0
-                        }
-                    ],
-                    "TargetServer": None,
-                    "TranslateName": 1003
-                }
-            ],
-            "帆船": [
-                {
-                    "$type": "StaticHttpRegionInfo, Assembly-CSharp",
-                    "Name": "<color=#ff7518>帆船服<color=#ffff00>[广东广州]",
-                    "PingServer": "https://gz.fcaugame.cn",
-                    "Servers": [
-                        {
-                            "Name": "Http-1",
-                            "Ip": "https://gz.fcaugame.cn",
-                            "Port": 443,
-                            "UseDtls": False,
-                            "Players": 0,
-                            "ConnectionFailures": 0
-                        }
-                    ],
-                    "TargetServer": None,
-                    "TranslateName": 1003
-                }
-            ],
-            "核电站": [
-                {
-                    "$type": "StaticHttpRegionInfo, Assembly-CSharp",
-                    "Name": "<color=#FFA500>核电站</color><color=#ffff00>[宁波]</color>",
-                    "PingServer": "https://nb.aunpp.cn",
-                    "Servers": [
-                        {
-                            "Name": "http-1",
-                            "Ip": "https://nb.aunpp.cn",
-                            "Port": 8888,
-                            "UseDtls": False,
-                            "Players": 0,
-                            "ConnectionFailures": 0
-                        }
-                    ],
-                    "TargetServer": None,
-                    "TranslateName": 1003
-                }
-            ],
-            "碧水港": [
-                {
-                    "$type": "StaticHttpRegionInfo, Assembly-CSharp",
-                    "Name": "<color=#00E0FF>碧水港</color><color=#ffff00>[香港]</color>",
-                    "PingServer": "miaowuhk.fcaugame.cn",
-                    "Servers": [
-                        {
-                            "Name": "http-1",
-                            "Ip": "miaowuhk.fcaugame.cn",
-                            "Port": 443,
-                            "UseDtls": False,
-                            "Players": 0,
-                            "ConnectionFailures": 0
-                        }
-                    ],
-                    "TargetServer": None,
-                    "TranslateName": 1003
-                }
-            ],
-            "Niko": [
-                {
-                    "$type": "StaticHttpRegionInfo, Assembly-CSharp",
-                    "Name": "<color=#ffe000ff>Niko233(NA)</color>",
-                    "PingServer": "https://au-us.niko233.me",
-                    "Servers": [
-                        {
-                            "Name": "Http-1",
-                            "Ip": "https://au-us.niko233.me",
-                            "Port": 443,
-                            "UseDtls": False,
-                            "Players": 0,
-                            "ConnectionFailures": 0
-                        }
-                    ],
-                    "TargetServer": None,
-                    "TranslateName": 1003
-                },
-                {
-                    "$type": "StaticHttpRegionInfo, Assembly-CSharp",
-                    "Name": "<color=#ffe000ff>Niko233(AS)</color>",
-                    "PingServer": "https://au-as.niko233.me",
-                    "Servers": [
-                        {
-                            "Name": "Http-1",
-                            "Ip": "https://au-as.niko233.me",
-                            "Port": 443,
-                            "UseDtls": False,
-                            "Players": 0,
-                            "ConnectionFailures": 0
-                        }
-                    ],
-                    "TargetServer": None,
-                    "TranslateName": 1003
-                },
-                {
-                    "$type": "StaticHttpRegionInfo, Assembly-CSharp",
-                    "Name": "<color=#ffe000ff>Niko233(EU)</color>",
-                    "PingServer": "https://au-eu.niko233.me",
-                    "Servers": [
-                        {
-                            "Name": "Http-1",
-                            "Ip": "https://au-eu.niko233.me",
-                            "Port": 443,
-                            "UseDtls": False,
-                            "Players": 0,
-                            "ConnectionFailures": 0
-                        }
-                    ],
-                    "TargetServer": None,
-                    "TranslateName": 1003
-                },
-                {
-                    "$type": "StaticHttpRegionInfo, Assembly-CSharp",
-                    "Name": "<color=#ffe000ff>Niko233(CN)</color>",
-                    "PingServer": "https://au-as.niko233.me",
-                    "Servers": [
-                        {
-                            "Name": "Http-1",
-                            "Ip": "https://au-as.niko233.me",
-                            "Port": 443,
-                            "UseDtls": False,
-                            "Players": 0,
-                            "ConnectionFailures": 0
-                        }
-                    ],
-                    "TargetServer": None,
-                    "TranslateName": 1003
-                }
-            ]
-        }
+        # 存储从远程获取的服务器配置
+        self.remote_server_configs = {}
+        
+        # GitHub仓库地址
+        self.github_repo_url = "https://raw.githubusercontent.com/YvonneOfficial/AUT-Servers/main/Servers"
+        # 镜像源地址
+        self.mirror_repo_urls = [
+            "https://ghfast.top/https://raw.githubusercontent.com/YvonneOfficial/AUT-Servers/main/Servers",
+            "https://gh-proxy.com/https://raw.githubusercontent.com/YvonneOfficial/AUT-Servers/main/Servers"
+        ]
+        
+    def init_logging(self):
+        """初始化日志系统"""
+        # 配置日志格式
+        log_format = logging.Formatter(
+            '[%(levelname)s] %(asctime)s %(message)s', 
+            datefmt='%Y/%m/%d %H:%M:%S'
+        )
+        
+        # 创建logger
+        self.logger = logging.getLogger('AUTools')
+        self.logger.setLevel(logging.DEBUG)
+        
+        # 创建控制台处理器
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+        console_handler.setFormatter(log_format)
+        
+        # 添加处理器到logger
+        self.logger.addHandler(console_handler)
+        
+        self.logger.info("AUTools日志系统初始化完成")
         
     def center_window(self):
         """将窗口居中显示"""
@@ -343,6 +237,11 @@ class AmongUsTools:
                            bg="#9E9E9E", fg="white", font=("Arial", 12, "bold"),
                            width=20, height=2, relief=tk.RAISED, bd=2)
         fix_btn.pack(pady=10)
+        
+        # 添加按钮点击事件日志
+        rp_btn.bind("<Button-1>", lambda e: self.logger.info("用户点击了今日人品按钮"))
+        game_btn.bind("<Button-1>", lambda e: self.logger.info("用户点击了小游戏按钮"))
+        fix_btn.bind("<Button-1>", lambda e: self.logger.info("用户点击了修复旧版黑屏按钮"))
         
     def check_personality(self):
         """检查今日人品功能"""
@@ -498,6 +397,7 @@ class AmongUsTools:
         snake_game = SnakeGame()
         
     def load_data(self):
+        self.logger.info("用户点击载入数据按钮")
         # 询问用户选择方式
         choice = messagebox.askquestion("选择载入方式", "是否使用默认路径自动载入regioninfo.json文件？\n\n是：自动选择\n否：手动选择", icon='question')
         
@@ -538,8 +438,85 @@ class AmongUsTools:
         else:
             self.status_label.config(text="未选择文件", fg="red")
             
+    def fetch_server_configs(self, selected_servers):
+        """从GitHub获取服务器配置"""
+        self.logger.info(f"开始获取服务器配置，用户选择的服务器: {selected_servers}")
+        
+        server_files = {
+            "清风": "QingFeng.json",
+            "帆船": "FanChuan.json",
+            "核电站": "HeDianZhan.json",
+            "碧水港": "BiShuiGang.json",
+            "Niko": "Niko.json"
+        }
+        
+        # 创建不验证SSL证书的上下文
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        
+        self.remote_server_configs = {}
+        
+        # 尝试连接原始GitHub仓库
+        repo_urls = [self.github_repo_url] + self.mirror_repo_urls
+        
+        def fetch_from_source(args):
+            """从单个源获取配置"""
+            repo_url, server_name, filename, ssl_context = args
+            try:
+                url = f"{repo_url}/{filename}"
+                request = urllib.request.Request(url)
+                response = urllib.request.urlopen(request, context=ssl_context, timeout=5)
+                config_data = json.loads(response.read().decode('utf-8'))
+                return server_name, config_data, repo_url
+            except Exception as e:
+                return server_name, None, repo_url
+        
+        # 只获取用户选择的服务器配置
+        for server_name in selected_servers:
+            if server_name not in server_files:
+                self.logger.warning(f"未知的服务器: {server_name}")
+                continue
+                
+            filename = server_files[server_name]
+            self.logger.debug(f"正在获取服务器 {server_name} 的配置...")
+            
+            # 构建所有尝试参数
+            fetch_args = [(repo_url, server_name, filename, ssl_context) for repo_url in repo_urls]
+            
+            # 使用线程池并发尝试所有源
+            with concurrent.futures.ThreadPoolExecutor(max_workers=len(repo_urls)) as executor:
+                future_to_url = {executor.submit(fetch_from_source, args): args[0] for args in fetch_args}
+                
+                # 等待第一个成功的结果
+                config_data = None
+                successful_url = None
+                for future in concurrent.futures.as_completed(future_to_url):
+                    _, data, url = future.result()
+                    if data is not None:
+                        config_data = data
+                        successful_url = url
+                        break  # 使用第一个成功的结果
+                
+                # 如果所有源都失败了
+                if config_data is None:
+                    self.logger.error(f"无法从任何源获取服务器 {server_name} 的配置")
+                    messagebox.showerror("错误", f"无法从任何源获取服务器 {server_name} 的配置")
+                    return False
+                    
+                self.remote_server_configs[server_name] = config_data
+                self.logger.info(f"服务器 {server_name} 的配置获取成功，使用源: {successful_url}")
+                
+                # 如果使用的不是主源，可以考虑提示用户
+                if successful_url != self.github_repo_url:
+                    self.logger.info(f"服务器 {server_name} 的配置通过镜像源 {successful_url} 获取")
+        
+        self.logger.info(f"所有选中服务器配置获取完成: {list(self.remote_server_configs.keys())}")
+        return True
+            
     def install_servers(self):
         if not self.regioninfo_path:
+            self.logger.warning("用户未载入regioninfo.json文件")
             self.status_label.config(text="请先载入数据", fg="red")
             messagebox.showerror("错误", "请先载入regioninfo.json文件")
             return
@@ -547,10 +524,13 @@ class AmongUsTools:
         # 检查是否有选中的服务器
         selected_servers = [name for name, var in self.server_vars.items() if var.get()]
         if not selected_servers:
+            self.logger.warning("用户未选择任何服务器")
             self.status_label.config(text="请选择至少一个服务器", fg="red")
             messagebox.showerror("错误", "请选择至少一个服务器")
             return
             
+        self.logger.info(f"用户开始安装服务器，选中的服务器: {selected_servers}")
+        
         # 显示警告对话框
         warning_result = messagebox.askyesno(
             "警告",
@@ -559,39 +539,56 @@ class AmongUsTools:
         )
         
         if not warning_result:
+            self.logger.info("用户取消了安装操作")
             self.status_label.config(text="安装已取消", fg="gray")
+            return
+            
+        # 从远程获取服务器配置
+        self.status_label.config(text="正在获取服务器配置...", fg="orange")
+        self.root.update_idletasks()  # 更新界面
+            
+        if not self.fetch_server_configs(selected_servers):
+            self.status_label.config(text="获取服务器配置失败", fg="red")
             return
             
         # 检查是否有运行中的Among Us进程
         among_us_processes = [p for p in psutil.process_iter(['pid', 'name']) if p.info['name'] == 'Among Us.exe']
         if among_us_processes:
+            self.logger.info("检测到运行中的Among Us进程")
             result = messagebox.askyesno("警告", "检测到Among Us正在运行，是否关闭游戏进程以继续安装？")
             if result:
                 try:
                     for proc in among_us_processes:
                         proc.terminate()
                         proc.wait(timeout=5)  # 等待最多5秒
+                    self.logger.info("成功关闭Among Us进程")
                     messagebox.showinfo("成功", "已关闭Among Us进程，请重新启动游戏以应用更改")
                 except Exception as e:
+                    self.logger.error(f"关闭进程时出错: {str(e)}")
                     messagebox.showerror("错误", f"关闭进程时出错: {str(e)}")
                     return
             else:
                 # 用户选择不关闭进程，继续进行安装
+                self.logger.info("用户选择不关闭Among Us进程，继续安装")
                 pass
                 
         # 执行attrib命令移除regioninfo.json文件的只读属性
         try:
             import subprocess
             subprocess.run(['attrib', '-r', self.regioninfo_path], check=True, capture_output=True)
+            self.logger.debug("成功移除regioninfo.json的只读属性")
         except Exception as e:
             # 即使attrib命令执行失败也继续安装流程
+            self.logger.warning(f"移除regioninfo.json只读属性时出错: {str(e)}")
             pass  # 不中断安装过程
                 
         # 读取regioninfo.json文件
         try:
             with open(self.regioninfo_path, 'r', encoding='utf-8') as f:
                 region_data = json.load(f)
+            self.logger.debug("成功读取regioninfo.json文件")
         except Exception as e:
+            self.logger.error(f"读取regioninfo.json文件失败: {str(e)}")
             self.status_label.config(text="读取regioninfo.json文件失败", fg="red")
             messagebox.showerror("错误", f"读取regioninfo.json文件失败: {str(e)}")
             return
@@ -601,8 +598,14 @@ class AmongUsTools:
         duplicate_servers = []  # 记录重复的服务器
         
         for server_name in selected_servers:
-            if server_name in self.server_configs:
-                for config in self.server_configs[server_name]:
+            if server_name in self.remote_server_configs:
+                # 使用从远程获取的配置
+                configs = self.remote_server_configs[server_name]
+                # 确保configs是列表格式
+                if not isinstance(configs, list):
+                    configs = [configs]
+                    
+                for config in configs:
                     # 检查是否已存在相同的服务器配置
                     existing = False
                     for existing_region in region_data.get("Regions", []):
@@ -623,6 +626,7 @@ class AmongUsTools:
         try:
             with open(self.regioninfo_path, 'w', encoding='utf-8') as f:
                 json.dump(region_data, f, ensure_ascii=False, indent=2)
+            self.logger.info(f"成功写入regioninfo.json文件，新增服务器: {installed_servers}, 重复服务器: {duplicate_servers}")
                 
             # 构建安装结果信息
             result_message = ""
@@ -637,9 +641,15 @@ class AmongUsTools:
                 
             self.status_label.config(text=f"安装完成：{len(installed_servers)} 个新服务器，{len(duplicate_servers)} 个重复服务器", fg="green")
             messagebox.showinfo("安装结果", result_message)
+            self.logger.info(f"安装完成：{len(installed_servers)} 个新服务器，{len(duplicate_servers)} 个重复服务器")
         except Exception as e:
+            self.logger.error(f"写入regioninfo.json文件失败: {str(e)}")
             self.status_label.config(text="写入regioninfo.json文件失败", fg="red")
             messagebox.showerror("错误", f"写入regioninfo.json文件失败: {str(e)}")
+
+        # 清理远程配置缓存
+        self.remote_server_configs = {}
+        self.logger.debug("清理远程配置缓存")
 
 
 class SnakeGame:
