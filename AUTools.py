@@ -1,4 +1,4 @@
-# Among Us Tools v1.0.8 by 忆梦
+# Among Us Tools v1.0.9 by 忆梦
 # 本程序仅供学习交流使用，请勿用于商业用途。
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
@@ -21,7 +21,7 @@ class AmongUsTools:
         self.root = root
         self.root.title("Among Us 私服安装工具箱")
         
-        # 设置窗口大小1
+        # 设置窗口大小
         self.root.geometry("600x400")
         self.root.resizable(False, False)
         
@@ -54,6 +54,17 @@ class AmongUsTools:
         
         # 初始化今日人品点击次数
         self.rp_click_count = 0
+        # 初始化彩蛋触发次数
+        self.rp_egg_trigger_count = random.randint(1, 99)
+        # 彩蛋语录
+        self.egg_quotes = [
+            "你是大笨蛋！",
+            "有一个baka正在看我！",
+            "作者是忆梦哦！",
+            "哈呀哈基米，米呀米记哈~",
+            "恭喜你中大奖啦！大奖就是没有大奖！",
+            "草飞喵呜！"
+        ]
         
         # 存储regioninfo.json文件路径
         self.regioninfo_path = None
@@ -245,14 +256,32 @@ class AmongUsTools:
         
     def check_personality(self):
         """检查今日人品功能"""
+        self.logger.info("用户点击今日人品按钮")
         # 增加点击次数
         self.rp_click_count += 1
         
         # 检查是否触发彩蛋
+        egg_triggered = False
+        if self.rp_click_count >= self.rp_egg_trigger_count:
+            # 重置计数器
+            self.rp_click_count = 0
+            self.rp_egg_trigger_count = random.randint(1, 99)
+            # 标记彩蛋已触发
+            egg_triggered = True
+            self.logger.debug("触发彩蛋：用户点击次数达到随机触发次数")
+        
+        # 检查是否触发"不要再点我啦!"彩蛋
+        nag_egg_triggered = False
         if self.rp_click_count > 5:
-            # 显示彩蛋信息
-            messagebox.showinfo("提示", "不要再点我啦！")
+            nag_egg_triggered = True
+            self.logger.debug("触发连续点击彩蛋：用户连续点击超过5次")
             
+        # 检查是否触发100次以上的特殊彩蛋
+        special_egg_triggered = False
+        if self.rp_click_count > 100:
+            special_egg_triggered = True
+            self.logger.debug("触发100次以上特殊彩蛋：用户连续点击超过100次")
+        
         # 获取AUTools文件夹路径
         username = os.getenv('USERNAME')
         folder_path = f"C:\\Users\\{username}\\AppData\\Local\\AUTools"
@@ -260,27 +289,40 @@ class AmongUsTools:
         # 如果文件夹不存在则创建
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
+            self.logger.debug(f"创建AUTools文件夹: {folder_path}")
             
         file_path = os.path.join(folder_path, "rp.json")
         today = datetime.now().strftime("%Y/%m/%d")
         
-        # 获取每日一言
-        try:
-            import urllib.request
-            import ssl
-            
-            # 创建不验证SSL证书的上下文（某些环境下可能需要）
-            ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-            
+        # 获取每日一言或彩蛋语录
+        if special_egg_triggered:
+            # 使用100次以上的特殊语录
+            hitokoto = "你是无敌的无敌的大笨蛋！"
+            self.logger.debug("使用100次以上特殊语录")
+        elif egg_triggered:
+            # 使用彩蛋语录
+            hitokoto = random.choice(self.egg_quotes)
+            self.logger.debug("使用彩蛋语录替换每日一言")
+        else:
             # 获取每日一言
-            hitokoto_url = "https://v1.hitokoto.cn/?encode=text"
-            request = urllib.request.Request(hitokoto_url)
-            response = urllib.request.urlopen(request, context=ssl_context, timeout=5)
-            hitokoto = response.read().decode('utf-8')
-        except Exception as e:
-            hitokoto = "今日无言"
+            try:
+                import urllib.request
+                import ssl
+                
+                # 创建不验证SSL证书的上下文（某些环境下可能需要）
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+                
+                # 获取每日一言
+                hitokoto_url = "https://v1.hitokoto.cn/?encode=text"
+                request = urllib.request.Request(hitokoto_url)
+                response = urllib.request.urlopen(request, context=ssl_context, timeout=5)
+                hitokoto = response.read().decode('utf-8')
+                self.logger.debug("成功获取每日一言")
+            except Exception as e:
+                hitokoto = "今日无言"
+                self.logger.warning(f"获取每日一言失败: {str(e)}")
         
         # 如果文件存在
         if os.path.exists(file_path):
@@ -299,7 +341,12 @@ class AmongUsTools:
                         # 今日已生成人品值
                         if rp_line.startswith("rp="):
                             rp_value = rp_line.split("=")[1]
-                            messagebox.showinfo("今日人品", f"你今日的人品是 {rp_value}！\n\n{hitokoto}")
+                            self.logger.info(f"用户今日人品值: {rp_value}")
+                            # 根据是否触发连续点击彩蛋决定标题
+                            if nag_egg_triggered:
+                                messagebox.showinfo("不要再点我啦！", f"你今日的人品是 {rp_value}！\n\n{hitokoto}")
+                            else:
+                                messagebox.showinfo("今日人品", f"你今日的人品是 {rp_value}！\n\n{hitokoto}")
                             return
                 
                 # 不是今日或者文件格式不正确，重新生成
@@ -308,16 +355,27 @@ class AmongUsTools:
                     f.write(f"time={today}\n")
                     f.write(f"rp={rp_value}\n")
                     
-                messagebox.showinfo("今日人品", f"你今日的人品是 {rp_value}！\n\n{hitokoto}")
+                self.logger.info(f"重新生成用户今日人品值: {rp_value}")
+                # 根据是否触发连续点击彩蛋决定标题
+                if nag_egg_triggered:
+                    messagebox.showinfo("不要再点我啦！", f"你今日的人品是 {rp_value}！\n\n{hitokoto}")
+                else:
+                    messagebox.showinfo("今日人品", f"你今日的人品是 {rp_value}！\n\n{hitokoto}")
                 
             except Exception as e:
                 # 文件读取或解析出错，重新生成
+                self.logger.error(f"读取人品值文件出错: {str(e)}")
                 rp_value = str(random.randint(0, 100))
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(f"time={today}\n")
                     f.write(f"rp={rp_value}\n")
                     
-                messagebox.showinfo("今日人品", f"你今日的人品是 {rp_value}！\n\n{hitokoto}")
+                self.logger.info(f"重新生成用户今日人品值: {rp_value}")
+                # 根据是否触发连续点击彩蛋决定标题
+                if nag_egg_triggered:
+                    messagebox.showinfo("不要再点我啦！", f"你今日的人品是 {rp_value}！\n\n{hitokoto}")
+                else:
+                    messagebox.showinfo("今日人品", f"你今日的人品是 {rp_value}！\n\n{hitokoto}")
         else:
             # 文件不存在，创建新文件
             rp_value = str(random.randint(0, 100))
@@ -325,10 +383,16 @@ class AmongUsTools:
                 f.write(f"time={today}\n")
                 f.write(f"rp={rp_value}\n")
                 
-            messagebox.showinfo("今日人品", f"你今日的人品是 {rp_value}！\n\n{hitokoto}")
+            self.logger.info(f"首次生成用户今日人品值: {rp_value}")
+            # 根据是否触发连续点击彩蛋决定标题
+            if nag_egg_triggered:
+                messagebox.showinfo("不要再点我啦！", f"你今日的人品是 {rp_value}！\n\n{hitokoto}")
+            else:
+                messagebox.showinfo("今日人品", f"你今日的人品是 {rp_value}！\n\n{hitokoto}")
             
     def mini_game(self):
         """小游戏功能"""
+        self.logger.info("用户点击小游戏按钮")
         # 创建小游戏选择窗口
         game_window = tk.Toplevel(self.root)
         game_window.title("小游戏")
@@ -357,39 +421,115 @@ class AmongUsTools:
         
     def fix_black_screen(self):
         """修复旧版黑屏功能"""
+        self.logger.info("用户点击修复旧版黑屏按钮")
         # 显示警告对话框
         warning_result = messagebox.askyesno(
             "警告",
-            "该操作将从网络下载设置文件并替换您当前的游戏设置，可能存在一定风险。\n\n是否继续？",
+            "该操作将根据您当前的游戏设置生成适用于旧版的设置文件，可能存在一定风险。\n\n是否继续？",
             icon='warning'
         )
         
         if not warning_result:
+            self.logger.info("用户取消修复旧版黑屏操作")
             return
             
         try:
-            import urllib.request
-            import ssl
-            
-            # 创建不验证SSL证书的上下文（某些环境下可能需要）
-            ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-            
             # 获取游戏设置文件路径
             appdata_local_low = os.path.expandvars(r"%LOCALAPPDATA%\..\LocalLow")
             settings_path = os.path.join(appdata_local_low, "Innersloth", "Among Us", "settings.amogus")
             
-            # 下载文件
-            url = "http://api.mxyx.club/download/among-us/OtherFiles/settings.amogus"
-            urllib.request.urlretrieve(url, settings_path)
+            # 检查当前设置文件是否存在
+            if not os.path.exists(settings_path):
+                self.logger.warning("当前设置文件不存在")
+                messagebox.showerror("错误", "未找到当前设置文件，请先运行游戏以生成设置文件")
+                return
+                
+            # 读取当前设置文件
+            with open(settings_path, 'r', encoding='utf-8') as f:
+                current_settings = json.load(f)
+                
+            self.logger.debug("成功读取当前设置文件")
             
-            messagebox.showinfo("成功", "设置文件已成功更新！")
+            # 转换为旧版设置
+            old_version_settings = self.convert_to_old_settings(current_settings)
+            
+            # 备份原文件（如果存在）
+            if os.path.exists(settings_path + ".backup"):
+                os.remove(settings_path + ".backup")
+            os.rename(settings_path, settings_path + ".backup")
+            self.logger.debug("已备份原设置文件")
+            
+            # 写入旧版设置
+            with open(settings_path, 'w', encoding='utf-8') as f:
+                json.dump(old_version_settings, f, ensure_ascii=False, indent=2)
+            
+            self.logger.info("成功生成并写入旧版设置文件")
+            messagebox.showinfo("成功", "已根据您的当前设置生成适用于旧版的游戏配置！\n原文件已备份为 settings.amogus.backup")
         except Exception as e:
+            self.logger.error(f"修复旧版黑屏失败: {str(e)}")
             messagebox.showerror("错误", f"操作失败: {str(e)}")
 
+    def convert_to_old_settings(self, new_settings):
+        """
+        将新版设置转换为旧版设置
+        """
+        self.logger.debug("开始转换设置文件格式")
+        
+        # 复制基础设置
+        old_settings = {}
+        
+        # 复制通用设置部分
+        if "gameplay" in new_settings:
+            old_settings["gameplay"] = new_settings["gameplay"].copy()
+            
+        if "accessibility" in new_settings:
+            old_settings["accessibility"] = new_settings["accessibility"].copy()
+            
+        if "audio" in new_settings:
+            old_settings["audio"] = new_settings["audio"].copy()
+            
+        if "video" in new_settings:
+            old_settings["video"] = new_settings["video"].copy()
+            
+        if "language" in new_settings:
+            old_settings["language"] = new_settings["language"].copy()
+            
+        # 处理输入设置（移除inputData）
+        if "input" in new_settings:
+            old_settings["input"] = new_settings["input"].copy()
+            # 移除新版特有的inputData字段
+            if "inputData" in old_settings["input"]:
+                del old_settings["input"]["inputData"]
+                
+        # 处理多人游戏设置（移除新版特有的字段并使用旧版选项值）
+        if "multiplayer" in new_settings:
+            old_settings["multiplayer"] = new_settings["multiplayer"].copy()
+            # 移除新版特有的字段
+            new_multiplayer_fields = [
+                "filterDictionary", 
+                "classicFilterSet", 
+                "hnsFilterSet"
+            ]
+            
+            for field in new_multiplayer_fields:
+                if field in old_settings["multiplayer"]:
+                    del old_settings["multiplayer"][field]
+            
+            # 使用旧版的选项值替换新版的选项值
+            old_settings["multiplayer"]["normalHostOptions"] = "B1UAAAEPAAABAAEAAIA/AACAPwAAwD8AAHBBAQECAQAAAAMBDwAAAHgAAAABAAEBAAAEBQAAAAMAAAAKCAIAAAACAAAPBQQAAAADAAA8CgADAAAAAgAAHg8="
+            old_settings["multiplayer"]["normalSearchOptions"] = "B1UAAAEKAAABAHcAAIA/AACAPwAAwD8AAHBBAQECAQAAAAMBDwAAAHgAAAABAAEBAAAEBQAAAAMAAAAKCAIAAAACAAAPBQQAAAADAAA8CgADAAAAAgAAHg8="
+            old_settings["multiplayer"]["hideNSeekHostOptions"] = "Bz8AAAIPAAEAAAAAAIA/AACAPwAAwD8BAQIBAQAAAAAASEMzM7M+AACAPgEBAABIQpqZmT8BAP////8AAMBAAABAQA=="
+            old_settings["multiplayer"]["hideNSeekSearchOptions"] = "Bz8AAAIPAAEAAAAAAIA/AACAPwAAwD8BAQIBAQAAAAAASEMzM7M+AACAPgEBAABIQpqZmT8BAP////8AAMBAAABAQA=="
+                    
+        # 设置数据版本
+        old_settings["dataVersion"] = 1
+        
+        self.logger.debug("设置文件格式转换完成")
+        return old_settings
+        
     def start_snake_game(self, parent_window):
         """启动贪吃蛇游戏"""
+        self.logger.info("用户选择启动贪吃蛇游戏")
         # 关闭选择窗口
         parent_window.destroy()
         
@@ -407,6 +547,7 @@ class AmongUsTools:
             self.manual_select()
         
     def auto_select(self):
+        self.logger.debug("用户选择自动载入regioninfo.json文件")
         # 默认路径
         appdata_local_low = os.path.expandvars(r"%LOCALAPPDATA%\..\LocalLow")
         regioninfo_path = os.path.join(appdata_local_low, "Innersloth", "Among Us", "regioninfo.json")
@@ -415,12 +556,15 @@ class AmongUsTools:
             self.regioninfo_path = regioninfo_path
             self.status_label.config(text=f"已加载: {os.path.basename(regioninfo_path)}", fg="green")
             self.enable_server_selection()  # 启用服务器选择
+            self.logger.info(f"成功加载regioninfo.json文件: {regioninfo_path}")
             messagebox.showinfo("成功", f"已成功加载regioninfo.json文件\n路径: {regioninfo_path}")
         else:
             self.status_label.config(text="未找到regioninfo.json文件", fg="red")
+            self.logger.warning(f"未在默认路径找到regioninfo.json文件: {regioninfo_path}")
             messagebox.showerror("错误", f"未在默认路径找到regioninfo.json文件\n请确认文件是否存在:\n{regioninfo_path}")
             
     def manual_select(self):
+        self.logger.debug("用户选择手动载入regioninfo.json文件")
         file_path = filedialog.askopenfilename(
             title="选择regioninfo.json文件",
             filetypes=[("JSON files", "*.json"), ("All files", "*.*")]
@@ -431,12 +575,15 @@ class AmongUsTools:
                 self.regioninfo_path = file_path
                 self.status_label.config(text=f"已加载: {os.path.basename(file_path)}", fg="green")
                 self.enable_server_selection()  # 启用服务器选择
+                self.logger.info(f"成功手动加载regioninfo.json文件: {file_path}")
                 messagebox.showinfo("成功", f"已成功加载regioninfo.json文件\n路径: {file_path}")
             else:
                 self.status_label.config(text="请选择正确的regioninfo.json文件", fg="red")
+                self.logger.warning(f"用户选择了错误的文件: {file_path}")
                 messagebox.showerror("错误", "请选择正确的regioninfo.json文件")
         else:
             self.status_label.config(text="未选择文件", fg="red")
+            self.logger.info("用户未选择任何文件")
             
     def fetch_server_configs(self, selected_servers):
         """从GitHub获取服务器配置"""
